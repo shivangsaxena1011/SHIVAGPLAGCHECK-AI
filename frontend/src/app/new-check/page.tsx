@@ -73,7 +73,7 @@ export default function NewCheckPage() {
         setUploading(false);
         // Navigate to result after 1s
         setTimeout(() => {
-          router.push(`/checks/${id}`);
+          router.push(`/checks/?id=${id}`);
         }, 1200);
       } else if (st.status === "FAILED") {
         setErrorMessage(st.error_message || "Analysis failed during processing.");
@@ -161,7 +161,7 @@ export default function NewCheckPage() {
 
           {isCompleted && checkId && (
             <button
-              onClick={() => router.push(`/checks/${checkId}`)}
+              onClick={() => router.push(`/checks/?id=${checkId}`)}
               className="inline-flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-6 py-2.5 rounded-lg shadow-lg transition"
             >
               <span>View Originality Report</span>

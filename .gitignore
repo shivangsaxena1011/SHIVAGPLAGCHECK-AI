@@ -43,9 +43,12 @@ htmlcov/
 *.db
 *.sqlite
 *.sqlite3
+*.db-shm
+*.db-wal
 data/*.db
 originalityguard.db
 shivang_plagcheck.db
+frontend/out/
 
 # Storage artifacts (uploads, reports, model caches)
 backend/storage/uploads/*
@@ -59,7 +62,6 @@ backend/storage/models/*
 node_modules/
 frontend/node_modules/
 frontend/.next/
-frontend/frontend/
 .next/
 out/
 .vercel

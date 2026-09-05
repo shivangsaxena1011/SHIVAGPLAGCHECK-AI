@@ -1,1 +1,0 @@
-Self-driving cars depend heavily on neural network vision pipelines and laser distance scanners to steer through busy city roads without any human assistance.

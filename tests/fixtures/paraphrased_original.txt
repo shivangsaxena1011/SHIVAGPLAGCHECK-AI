@@ -1,1 +1,0 @@
-Autonomous vehicles rely extensively on computer vision algorithms and LiDAR sensors to navigate complex urban traffic conditions without human driver intervention.

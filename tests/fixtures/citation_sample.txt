@@ -1,5 +1,0 @@
-Recent breakthroughs in sequence transduction models have replaced recurrent layers with multi-headed attention [1]. Subsequent works demonstrated that large scale pretraining enhances downstream few-shot capabilities (Brown et al., 2020).
-
-References
-[1] Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, L., & Polosukhin, I. (2017). Attention is All You Need. Advances in Neural Information Processing Systems. doi:10.48550/arXiv.1706.03762
-[2] Fabricated, J. (2024). Hallucinated Quantum Neural Optimization on Imaginary Chips. Journal of False Citations. doi:10.1000/182

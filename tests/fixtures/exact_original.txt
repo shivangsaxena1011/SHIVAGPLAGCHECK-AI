@@ -1,1 +1,0 @@
-Deep learning models have revolutionized natural language processing in recent years. Transformer architectures rely on self-attention mechanisms to compute representations of sequences without regard to positional distance. By utilizing multi-head attention, the model jointly attends to information from different representation subspaces at different positions.

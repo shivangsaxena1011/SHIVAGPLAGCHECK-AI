@@ -18,7 +18,6 @@ COPY backend/ /app/
 COPY originalguard/ /app/originalguard/
 COPY plagcheck/ /app/plagcheck/
 COPY shivangplagcheck/ /app/shivangplagcheck/
-COPY tests/fixtures/ /app/tests/fixtures/
 
 # Create data and storage directories
 RUN mkdir -p /app/data /app/storage

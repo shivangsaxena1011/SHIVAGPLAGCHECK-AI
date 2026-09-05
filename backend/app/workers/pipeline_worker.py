@@ -13,6 +13,7 @@ Executes the full end-to-end analysis workflow:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from pathlib import Path
@@ -104,7 +105,7 @@ class PipelineWorker:
 
             # 2. Extract document text and coordinates
             file_path = Path(submission.file_path)
-            extracted = self.extractor.extract_file(file_path)
+            extracted = await asyncio.to_thread(self.extractor.extract_file, file_path)
 
             doc = Document(
                 submission_id=submission_id,
@@ -260,7 +261,7 @@ class PipelineWorker:
             # 5. AI Writing Analysis (65%)
             await self.update_progress(session, submission_id, 65, "Evaluating AI writing likelihood")
 
-            ai_result = self.ai_detector.analyze_document(extracted.raw_text, sentence_dicts)
+            ai_result = await asyncio.to_thread(self.ai_detector.analyze_document, extracted.raw_text, sentence_dicts)
 
             for sig in ai_result.sentence_signals:
                 session.add(
@@ -280,8 +281,10 @@ class PipelineWorker:
             # 6. Citation & Reference Verification (75%)
             await self.update_progress(session, submission_id, 75, "Verifying citations & references")
 
-            in_text_cites = self.citation_detector.find_in_text_citations(
-                extracted.raw_text, extracted.pages
+            in_text_cites = await asyncio.to_thread(
+                self.citation_detector.find_in_text_citations,
+                extracted.raw_text,
+                extracted.pages,
             )
             for itc in in_text_cites:
                 session.add(
@@ -299,8 +302,10 @@ class PipelineWorker:
             bib_sec = next((s for s in extracted.sections if s.section_type == "BIBLIOGRAPHY"), None)
             bib_start = bib_sec.char_start if bib_sec else None
 
-            ref_entries = self.citation_detector.extract_and_verify_references(
-                extracted.raw_text, bib_section_start=bib_start
+            ref_entries = await asyncio.to_thread(
+                self.citation_detector.extract_and_verify_references,
+                extracted.raw_text,
+                bib_section_start=bib_start,
             )
             for ref in ref_entries:
                 session.add(
@@ -328,7 +333,8 @@ class PipelineWorker:
             ]
             citation_spans = [(c.char_start, c.char_end) for c in in_text_cites]
 
-            fusion_result = self.fusion_engine.fuse(
+            fusion_result = await asyncio.to_thread(
+                self.fusion_engine.fuse,
                 matches=raw_matches,
                 total_chars=extracted.char_count,
                 total_words=extracted.word_count,
@@ -373,7 +379,8 @@ class PipelineWorker:
             pdf_path = settings.REPORT_DIR / pdf_filename
 
             # Generate HTML report
-            self.html_generator.generate_file(
+            await asyncio.to_thread(
+                self.html_generator.generate_file,
                 output_path=html_path,
                 submission=submission,
                 document=extracted,
@@ -385,7 +392,8 @@ class PipelineWorker:
             )
 
             # Generate PDF report
-            self.pdf_generator.generate_file(
+            await asyncio.to_thread(
+                self.pdf_generator.generate_file,
                 output_path=pdf_path,
                 submission=submission,
                 document=extracted,

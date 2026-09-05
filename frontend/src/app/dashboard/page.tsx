@@ -122,7 +122,7 @@ export default function DashboardPage() {
                   <tr key={check.id} className="hover:bg-white/[0.02] transition">
                     <td className="py-3.5 px-4">
                       <Link
-                        href={`/checks/${check.id}`}
+                        href={`/checks/?id=${check.id}`}
                         className="font-semibold text-white hover:text-blue-400 transition flex items-center space-x-2"
                       >
                         <FileText className="w-4 h-4 text-blue-400 shrink-0" />
@@ -174,7 +174,7 @@ export default function DashboardPage() {
                         {check.status === "COMPLETED" && (
                           <>
                             <Link
-                              href={`/checks/${check.id}`}
+                              href={`/checks/?id=${check.id}`}
                               className="px-2.5 py-1 rounded bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 text-xs font-medium transition"
                             >
                               Report

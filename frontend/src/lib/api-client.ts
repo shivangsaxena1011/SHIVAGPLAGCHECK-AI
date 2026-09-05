@@ -2,7 +2,18 @@
  * SHIVANG PLAGCHECK AI API Client.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
+function getApiBase(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== "undefined") {
+    return "/api/v1";
+  }
+  return "http://127.0.0.1:8000/api/v1";
+}
+
+const API_BASE = getApiBase();
+
 
 export interface CheckStatus {
   id: string;
@@ -160,16 +171,27 @@ export const api = {
   },
 
   async getCheckStatus(id: string): Promise<CheckStatus> {
-    const res = await fetch(`${API_BASE}/checks/${id}/status`);
-    if (!res.ok) throw new Error("Failed to fetch check status");
+    const cleanId = (id || "").trim();
+    if (!cleanId || cleanId === "index.txt" || cleanId.includes("/")) {
+      throw new Error("Invalid check ID");
+    }
+    const res = await fetch(`${API_BASE}/checks/${encodeURIComponent(cleanId)}/status`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}: Failed to fetch check status` }));
+      throw new Error(err.detail || `HTTP ${res.status}: Failed to fetch check status`);
+    }
     return res.json();
   },
 
   async getCheckResult(id: string): Promise<CheckResult> {
-    const res = await fetch(`${API_BASE}/checks/${id}/result`);
+    const cleanId = (id || "").trim();
+    if (!cleanId || cleanId === "index.txt" || cleanId.includes("/")) {
+      throw new Error("Invalid check ID");
+    }
+    const res = await fetch(`${API_BASE}/checks/${encodeURIComponent(cleanId)}/result`);
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: "Failed to fetch result" }));
-      throw new Error(err.detail || "Failed to fetch result");
+      const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}: Failed to fetch result` }));
+      throw new Error(err.detail || `HTTP ${res.status}: Failed to fetch result`);
     }
     return res.json();
   },

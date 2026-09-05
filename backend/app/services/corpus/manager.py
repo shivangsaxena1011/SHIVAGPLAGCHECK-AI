@@ -94,6 +94,23 @@ class CorpusIndexManager:
         """Get an indexed source document by ID."""
         return self.sources.get(source_id)
 
+    def remove_document(self, source_id: str) -> None:
+        """Remove a document and its fingerprints from memory."""
+        doc = self.sources.pop(source_id, None)
+        if not doc:
+            return
+
+        # Purge inverted index references for this source_id
+        for chunk_idx, fps in doc.fingerprints_by_chunk.items():
+            for fp in fps:
+                if fp in self.inverted_index:
+                    self.inverted_index[fp] = [
+                        item for item in self.inverted_index[fp] if item[0] != source_id
+                    ]
+                    if not self.inverted_index[fp]:
+                        del self.inverted_index[fp]
+
+
     async def load_from_db(self, session: Any) -> int:
         """Hydrate in-memory inverted index from database Source records."""
         from sqlalchemy import select

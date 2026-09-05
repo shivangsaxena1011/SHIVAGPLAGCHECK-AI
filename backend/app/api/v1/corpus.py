@@ -197,5 +197,5 @@ async def delete_corpus_document(source_id: str, db: AsyncSession = Depends(get_
     await db.delete(s)
     await db.commit()
     # Remove from in-memory manager
-    corpus_manager.sources.pop(source_id, None)
+    corpus_manager.remove_document(source_id)
     return None

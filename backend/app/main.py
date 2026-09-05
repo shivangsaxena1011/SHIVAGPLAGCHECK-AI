@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 import sys
 from pathlib import Path
 
-# Ensure backend directory is in sys.path so 'app.*' imports always resolve
-_backend_dir = Path(__file__).resolve().parent.parent
-if str(_backend_dir) not in sys.path:
-    sys.path.insert(0, str(_backend_dir))
+# Ensure backend directory is in sys.path for direct imports
+_backend_dir = str(Path(__file__).resolve().parent.parent)
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
 
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
@@ -68,3 +68,39 @@ async def health():
         "corpus_documents_loaded": corpus_manager.total_documents(),
         "total_fingerprints_indexed": corpus_manager.total_fingerprints(),
     }
+
+
+# Frontend static distribution
+import os
+from pathlib import Path
+from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+FRONTEND_DIST = (Path(__file__).resolve().parent.parent.parent / "frontend" / "out")
+if not FRONTEND_DIST.exists():
+    FRONTEND_DIST = Path("frontend/out").resolve()
+
+from fastapi import HTTPException
+
+# Dynamic route compatibility: redirect /checks/<id> to /checks/?id=<id>
+@app.get("/checks/{check_id}")
+async def redirect_check_by_id(check_id: str):
+    """Serve static files inside /checks if they exist, otherwise redirect actual check IDs to /checks/?id=<id>."""
+    static_file = FRONTEND_DIST / "checks" / check_id
+    if static_file.is_file():
+        return FileResponse(static_file)
+
+    # Don't intercept static assets or files
+    if "." in check_id:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return RedirectResponse(url=f"/checks/?id={check_id}", status_code=302)
+
+
+
+if FRONTEND_DIST.exists():
+    _next_dir = FRONTEND_DIST / "_next"
+    if _next_dir.exists():
+        app.mount("/_next", StaticFiles(directory=str(_next_dir)), name="next_assets")
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="frontend")
+

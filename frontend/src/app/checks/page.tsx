@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, useMemo, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   api,
@@ -14,10 +14,25 @@ import {
 } from "@/lib/api-client";
 import { getSourceColor } from "@/lib/color-palette";
 
-export default function CheckDetailPage() {
-  const params = useParams();
+function CheckDetailContent() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const id = params.id as string;
+  const [id, setId] = useState<string>("");
+
+  useEffect(() => {
+    const qId = searchParams.get("id");
+    if (qId && qId.trim() !== "" && qId !== "index.txt" && !qId.includes(".txt")) {
+      setId(qId.trim());
+      return;
+    }
+    if (typeof window !== "undefined") {
+      const parts = window.location.pathname.split("/").filter(Boolean);
+      const last = parts[parts.length - 1];
+      if (last && last !== "checks" && last !== "index.txt" && !last.includes(".txt") && !last.includes(".html")) {
+        setId(last.trim());
+      }
+    }
+  }, [searchParams]);
 
   const [result, setResult] = useState<CheckResult | null>(null);
   const [status, setStatus] = useState<CheckStatus | null>(null);
@@ -37,14 +52,20 @@ export default function CheckDetailPage() {
   const [showSemantic, setShowSemantic] = useState(true);
   const [showAIHighlights, setShowAIHighlights] = useState(false);
 
+  const [reloadKey, setReloadKey] = useState(0);
+
   // Poll status or fetch result
   useEffect(() => {
+    if (!id) return;
     let interval: NodeJS.Timeout | null = null;
+    let retryCount = 0;
+    const maxRetries = 12;
 
     async function load() {
       try {
         const s = await api.getCheckStatus(id);
         setStatus(s);
+        retryCount = 0; // Reset consecutive failures on success
 
         if (s.status === "COMPLETED") {
           const res = await api.getCheckResult(id);
@@ -52,14 +73,18 @@ export default function CheckDetailPage() {
           setLoading(false);
           if (interval) clearInterval(interval);
         } else if (s.status === "FAILED") {
-          setError(s.error_message || "Analysis failed");
+          setError(s.error_message || "Analysis failed during processing.");
           setLoading(false);
           if (interval) clearInterval(interval);
         }
       } catch (err: any) {
-        setError(err.message || "Failed to load report");
-        setLoading(false);
-        if (interval) clearInterval(interval);
+        retryCount++;
+        console.warn(`Status poll attempt failed (${retryCount}/${maxRetries}):`, err);
+        if (retryCount >= maxRetries) {
+          setError(err.message || "Failed to load report. Please ensure the server is running and try again.");
+          setLoading(false);
+          if (interval) clearInterval(interval);
+        }
       }
     }
 
@@ -69,7 +94,8 @@ export default function CheckDetailPage() {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [id]);
+  }, [id, reloadKey]);
+
 
   // Map source ID to color index
   const sourceColorMap = useMemo(() => {
@@ -103,6 +129,21 @@ export default function CheckDetailPage() {
     }
   };
 
+  if (!id) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-20 text-center">
+        <h2 className="text-xl font-bold mb-2">No Analysis Selected</h2>
+        <p className="text-slate-400 mb-6">Please select an analysis from the dashboard or start a new check.</p>
+        <Link
+          href="/dashboard"
+          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm transition"
+        >
+          Go to Dashboard
+        </Link>
+      </div>
+    );
+  }
+
   if (loading && !result) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-20 text-center">
@@ -131,7 +172,17 @@ export default function CheckDetailPage() {
           <span className="text-4xl mb-4 block">⚠️</span>
           <h2 className="text-2xl font-bold text-red-400 mb-2">Analysis Failed or Unavailable</h2>
           <p className="text-slate-300 mb-6">{error || "Submission could not be found or processed."}</p>
-          <div className="flex justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
+            <button
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                setReloadKey((prev) => prev + 1);
+              }}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2"
+            >
+              <span>↻</span> Retry Loading Report
+            </button>
             <Link
               href="/dashboard"
               className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm transition"
@@ -140,7 +191,7 @@ export default function CheckDetailPage() {
             </Link>
             <Link
               href="/new-check"
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm transition"
+              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm transition"
             >
               Try New Submission
             </Link>
@@ -733,30 +784,32 @@ function renderHighlightedPage(
 
   matches.forEach((m) => {
     // Find occurrence of submitted_text in page
-    if (m.submitted_text && pageText.includes(m.submitted_text)) {
+    if (m.submitted_text && m.submitted_text.trim().length > 0 && pageText.includes(m.submitted_text)) {
       let idx = 0;
+      const mLen = m.submitted_text.length;
       while ((idx = pageText.indexOf(m.submitted_text, idx)) !== -1) {
         intervals.push({
           start: idx,
-          end: idx + m.submitted_text.length,
+          end: idx + mLen,
           match: m,
         });
-        idx += m.submitted_text.length;
+        idx += Math.max(mLen, 1);
       }
     }
   });
 
   if (showAIHeatmap) {
     aiFindings.forEach((f) => {
-      if (f.likelihood_score >= 0.5 && f.sentence_text && pageText.includes(f.sentence_text)) {
+      if (f.likelihood_score >= 0.5 && f.sentence_text && f.sentence_text.trim().length > 0 && pageText.includes(f.sentence_text)) {
         let idx = 0;
+        const fLen = f.sentence_text.length;
         while ((idx = pageText.indexOf(f.sentence_text, idx)) !== -1) {
           intervals.push({
             start: idx,
-            end: idx + f.sentence_text.length,
+            end: idx + fLen,
             aiFinding: f,
           });
-          idx += f.sentence_text.length;
+          idx += Math.max(fLen, 1);
         }
       }
     });
@@ -819,4 +872,19 @@ function renderHighlightedPage(
   }
 
   return <>{elements}</>;
+}
+
+export default function CheckDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh] text-gray-400">
+          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mr-3" />
+          <span>Loading analysis report...</span>
+        </div>
+      }
+    >
+      <CheckDetailContent />
+    </Suspense>
+  );
 }
