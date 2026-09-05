@@ -391,13 +391,38 @@ async def list_checks(db: AsyncSession = Depends(get_db)):
 
 @router.delete("/{check_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_check(check_id: str, db: AsyncSession = Depends(get_db)):
-    """Delete a submission and all associated reports/findings."""
-    stmt = select(Submission).where(Submission.id == check_id)
+    """Delete a submission and all associated reports/findings, including physical files on disk."""
+    stmt = (
+        select(Submission)
+        .where(Submission.id == check_id)
+        .options(selectinload(Submission.report))
+    )
     result = await db.execute(stmt)
     sub = result.scalar_one_or_none()
     if not sub:
         raise HTTPException(status_code=404, detail="Check not found.")
 
+    # 1. Delete physical uploaded document file from storage/uploads
+    if sub.file_path and os.path.exists(sub.file_path):
+        try:
+            os.remove(sub.file_path)
+        except Exception:
+            pass
+
+    # 2. Delete physical generated PDF and HTML reports from storage/reports
+    if sub.report:
+        if sub.report.pdf_path and os.path.exists(sub.report.pdf_path):
+            try:
+                os.remove(sub.report.pdf_path)
+            except Exception:
+                pass
+        if sub.report.html_path and os.path.exists(sub.report.html_path):
+            try:
+                os.remove(sub.report.html_path)
+            except Exception:
+                pass
+
+    # 3. Delete database record (cascades to all child entities)
     await db.delete(sub)
     await db.commit()
     return None
