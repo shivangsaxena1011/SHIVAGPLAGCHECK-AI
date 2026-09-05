@@ -1,0 +1,88 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+/lib/
+/lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+originalityguard.db
+shivang_plagcheck.db
+
+# Storage artifacts (uploads, reports, model caches)
+backend/storage/uploads/*
+backend/storage/reports/*
+backend/storage/models/*
+!backend/storage/uploads/.gitkeep
+!backend/storage/reports/.gitkeep
+!backend/storage/models/.gitkeep
+
+# Node & Next.js
+node_modules/
+frontend/node_modules/
+frontend/.next/
+.next/
+out/
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
